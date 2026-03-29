@@ -1,756 +1,354 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Aviator - Live Bet & Real-time Profit</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <title>bKash Payment | Sotota Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
+        * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .bkash-gradient { background: linear-gradient(135deg, #D12053 0%, #a51742 100%); }
+        .toast-custom {
+            visibility: hidden; min-width: 280px; background: #1e293b; color: white;
+            text-align: center; border-radius: 2rem; padding: 12px 20px; position: fixed;
+            z-index: 1000; bottom: 30px; left: 50%; transform: translateX(-50%) scale(0.9);
+            opacity: 0; transition: all 0.25s ease; font-weight: 600; backdrop-filter: blur(8px);
+            background: rgba(30,41,59,0.95); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.2);
         }
-
-        body {
-            background: linear-gradient(145deg, #05070c 0%, #0a0e16 100%);
-            color: white;
-            font-family: 'Segoe UI', 'Poppins', system-ui, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+        .toast-custom.show { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
+        .loading-spinner {
+            display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%; border-top-color: white; animation: spin 0.6s linear infinite; margin-right: 8px;
         }
-
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 193, 7, 0.5);
-            z-index: 10;
+        @keyframes spin { to { transform: rotate(360deg); } }
+        button:disabled { opacity: 0.7; cursor: not-allowed; transform: scale(0.98); }
+        .trx-input:focus { box-shadow: 0 0 0 3px rgba(209,32,83,0.2); border-color: #D12053; }
+        .copy-card:active { transform: scale(0.98); }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px;
         }
-
-        .balance-box {
-            background: #000000cc;
-            padding: 8px 24px;
-            border-radius: 40px;
-            border: 1px solid #ffcd7e;
-            color: #ffdf9c;
-            font-weight: bold;
-            font-size: 1.4rem;
-            font-family: monospace;
-            letter-spacing: 1px;
-            backdrop-filter: blur(4px);
-        }
-
-        .badge {
-            background: #1a1c22;
-            padding: 5px 16px;
-            border-radius: 30px;
-            font-size: 12px;
-            font-family: monospace;
-            color: #ffb347;
-        }
-
-        /* GAME SKY */
-        .game-screen {
-            height: 52%;
-            background: radial-gradient(ellipse at 30% 30%, #1b4a6b, #03050c);
-            position: relative;
-            overflow: hidden;
-            border-bottom: 3px solid #ffb347aa;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.6);
-        }
-
-        /* floating clouds */
-        .cloud {
-            position: absolute;
-            background: rgba(255,255,240,0.2);
-            border-radius: 80% 20% 70% 30%;
-            filter: blur(20px);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        /* Multiplier Display */
-        #multiplier {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 74px;
-            font-weight: 900;
-            text-shadow: 0 0 30px #ffaa33, 0 0 10px black;
-            background: linear-gradient(135deg, #fffae6, #ffcd7e);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            z-index: 20;
-            display: none;
-            font-family: monospace;
-            letter-spacing: 4px;
-            white-space: nowrap;
-        }
-
-        /* Live Profit Badge */
-        .live-profit {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.75);
-            backdrop-filter: blur(8px);
-            padding: 10px 20px;
-            border-radius: 50px;
-            border-left: 4px solid #2ecc71;
-            z-index: 25;
-            text-align: right;
-            font-family: monospace;
-            pointer-events: none;
-        }
-        .live-profit .label {
-            font-size: 11px;
-            color: #aaa;
-            letter-spacing: 1px;
-        }
-        .live-profit .amount {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2ecc71;
-        }
-        .live-profit .amount.negative {
-            color: #ff5555;
-        }
-
-        /* PLANE */
-        #plane-container {
-            position: absolute;
-            bottom: 25px;
-            left: -180px;
-            width: 140px;
-            z-index: 30;
-            display: none;
-            filter: drop-shadow(0 8px 15px rgba(0,0,0,0.6));
-        }
-
-        #plane-img {
-            width: 100%;
-            filter: drop-shadow(0 0 6px #ff6600);
-            animation: engineThrust 0.7s infinite alternate;
-        }
-
-        @keyframes engineThrust {
-            0% { filter: drop-shadow(0 0 3px #ffaa33); }
-            100% { filter: drop-shadow(0 0 20px #ff3300); }
-        }
-
-        /* COUNTDOWN */
-        #countdown-scene {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 40;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px 45px;
-            border-radius: 80px;
-            backdrop-filter: blur(12px);
-            border: 1px solid #ffc107cc;
-        }
-
-        .timer-circle {
-            width: 90px;
-            height: 90px;
-            border: 5px solid #ffaa33;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 44px;
-            font-weight: bold;
-            border-top-color: #2ecc71;
-            animation: spin 0.9s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* BET PANEL - Improved with live info */
-        .bet-container {
-            display: flex;
-            gap: 18px;
-            padding: 18px 24px;
-            background: #0b0d12;
-            flex: 1;
-            align-items: center;
-        }
-
-        .bet-card {
-            flex: 1;
-            background: #141820;
-            border-radius: 32px;
-            padding: 18px 20px;
-            border: 1px solid #2c2f3a;
-            box-shadow: 0 12px 25px rgba(0,0,0,0.5);
-        }
-
-        .bet-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            color: #ffcd7e;
-            font-weight: bold;
-        }
-
-        .amt-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #010101dd;
-            padding: 8px 12px;
-            border-radius: 60px;
-            margin-bottom: 18px;
-            border: 1px solid #ffb34788;
-        }
-
-        .amt-box button {
-            background: #2a2e3a;
-            border: none;
-            color: #ffcd7e;
-            font-size: 28px;
-            font-weight: bold;
-            width: 46px;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: 0.1s;
-        }
-
-        .amt-box input {
-            background: transparent;
-            border: none;
-            color: white;
-            width: 110px;
-            text-align: center;
-            font-size: 26px;
-            font-weight: bold;
-            outline: none;
-            font-family: monospace;
-        }
-
-        .current-bet-info {
-            background: #1e212a;
-            padding: 12px;
-            border-radius: 24px;
-            margin-top: 10px;
-            text-align: center;
-        }
-        .current-bet-info span {
-            color: #ffaa44;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        .btn-main {
-            width: 100%;
-            padding: 14px;
-            border-radius: 60px;
-            border: none;
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: transform 0.1s;
-            margin-top: 12px;
-        }
-
-        .btn-bet {
-            background: linear-gradient(95deg, #1f8a3c, #2ecc71);
-            color: white;
-            box-shadow: 0 4px 0 #0a5a2a;
-        }
-
-        .btn-cash {
-            background: linear-gradient(95deg, #f39c12, #ffcc44);
-            color: #1e1a0c;
-            display: none;
-            font-weight: 900;
-            box-shadow: 0 4px 0 #b45f06;
-        }
-
-        .btn-wait {
-            background: #3e3f48;
-            color: #ccc;
-            display: none;
-            cursor: default;
-        }
-
-        button:active {
-            transform: scale(0.97);
-        }
-
-        .crash-flash {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255,40,0,0.6), transparent);
-            pointer-events: none;
-            z-index: 45;
-            animation: flashFade 0.5s ease-out forwards;
-        }
-
-        @keyframes flashFade {
-            0% { opacity: 1; }
-            100% { opacity: 0; visibility: hidden; }
-        }
-
-        .admin-console {
-            position: fixed;
-            bottom: 8px;
-            right: 12px;
-            background: #000000aa;
-            font-size: 10px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            color: #ffaa66;
-            font-family: monospace;
-            z-index: 99;
-        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .payment-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .btn-pulse:active { transform: scale(0.97); }
+        .bg-pink-soft { background-color: #fff0f3; }
+        .text-bkash { color: #D12053; }
+        .border-bkash { border-color: #D12053; }
     </style>
 </head>
-<body>
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center min-h-screen p-4">
 
-<div class="header">
-    <div class="balance-box">💰 $<span id="balance">100.00</span></div>
-    <div class="badge">🛩️ ID: <span id="u-id">PLAYER</span></div>
-</div>
+    <div class="max-w-md w-full payment-card">
+        <!-- Main Card -->
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <!-- Header with bKash Branding -->
+            <div class="bkash-gradient p-6 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
+                        <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/>
+                        </svg>
+                    </div>
+                    <span class="text-white font-black text-xl tracking-tight">bKash Merchant</span>
+                </div>
+                <div class="text-white text-right">
+                    <p class="text-[10px] uppercase font-bold opacity-80 tracking-[0.15em]">Payable Amount</p>
+                    <h2 class="text-3xl font-black tracking-tight">৳ <span id="display-amount" class="tabular-nums">0</span></h2>
+                </div>
+            </div>
 
-<div class="game-screen">
-    <div id="countdown-scene">
-        <div class="timer-circle"><span id="cd-number">3</span></div>
-        <p style="margin-top: 12px; font-weight: bold;">✈️ NEXT FLIGHT</p>
-    </div>
-    <div id="multiplier">1.00x</div>
-    
-    <!-- LIVE PROFIT DISPLAY: দেখাবে বর্তমানে কত টাকা জিততে পারবে -->
-    <div class="live-profit" id="liveProfitBox">
-        <div class="label">💰 CURRENT PROFIT</div>
-        <div class="amount" id="profitAmount">$0.00</div>
-    </div>
-    
-    <div id="plane-container">
-        <img id="plane-img" src="https://i.ibb.co/LST6m89/aviator-plane.png" alt="Aviator Jet"
-             onerror="this.src='https://cdn-icons-png.flaticon.com/512/3106/3106920.png'">
-    </div>
-</div>
+            <div class="p-6 pt-7">
+                <!-- Info Alert -->
+                <div class="bg-pink-50 border-l-[5px] border-[#D12053] p-4 rounded-2xl mb-7 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <span class="text-[#D12053] text-xl">📌</span>
+                        <p class="text-xs font-semibold text-gray-700 leading-relaxed">
+                            <span class="font-black text-[#D12053]">Send Money</span> করুন নিচের bKash নম্বরে। টাকা পাঠানোর পর <span class="font-bold">TrxID</span> টি দিন। 
+                            <span class="block text-[11px] mt-1 text-gray-600">⚠️ একটি TrxID শুধু একবার ব্যবহার করা যাবে</span>
+                        </p>
+                    </div>
+                </div>
 
-<div class="bet-container">
-    <div class="bet-card">
-        <div class="bet-header">
-            <span>🎲 PLACE YOUR BET</span>
-            <span>⚡ MULTIPLIER</span>
+                <!-- Personal Number Section (Merchant Number) with Copy & Loading -->
+                <div class="mb-8">
+                    <label class="text-[11px] font-bold text-gray-500 uppercase tracking-[0.1em] block mb-2 ml-1 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1M9 12h.01"/></svg>
+                        পেমেন্ট নম্বর (Personal Number)
+                    </label>
+                    <div id="number-container" onclick="copyNumber()" class="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-dashed border-pink-300 hover:border-[#D12053] hover:bg-pink-50 cursor-pointer transition-all duration-200 copy-card">
+                        <span id="display-number" class="text-3xl font-black tracking-tighter text-gray-800">লোড হচ্ছে...</span>
+                        <div class="bkash-gradient text-white p-2.5 rounded-xl shadow-md group-hover:scale-110 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-gray-400 text-center mt-3 font-medium tracking-wide">🔁 নম্বর কপি করতে উপরের কার্ডে ক্লিক করুন</p>
+                </div>
+
+                <!-- Transaction ID Input with Loading State -->
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase ml-2 block mb-2 tracking-widest flex items-center gap-2">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Transaction ID (TrxID)
+                        </label>
+                        <input type="text" id="trx-input" placeholder="যেমন: 8N7A9X2K5L" autocomplete="off" class="w-full p-5 bg-gray-50 border-2 border-gray-200 focus:border-[#D12053] focus:outline-none text-center font-mono font-bold text-xl uppercase rounded-2xl transition-all trx-input">
+                    </div>
+                    
+                    <button id="submit-btn" onclick="sendPayment()" class="w-full bkash-gradient text-white font-bold py-5 rounded-2xl shadow-lg uppercase text-sm tracking-widest transition-all duration-200 flex items-center justify-center gap-2 btn-pulse hover:shadow-xl">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Confirm & Submit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 p-4 text-center border-t">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1">
+                    <span>🔒 Secure Payment</span> • <span>Powered by Sotota Shop</span>
+                </p>
+            </div>
         </div>
-        <div class="amt-box">
-            <button class="adj-dec">−</button>
-            <input type="number" id="betAmount" value="10.00" step="1.00">
-            <button class="adj-inc">+</button>
-        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastMsg" class="toast-custom font-medium">✨ bKash নম্বর কপি হয়েছে!</div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMfnJHzVyXCMgkPGJTEpom0bokbckAbZo",
+            authDomain: "payment-a71bc.firebaseapp.com",
+            projectId: "payment-a71bc",
+            storageBucket: "payment-a71bc.firebasestorage.app",
+            messagingSenderId: "904450864312",
+            appId: "1:904450864312:web:9369048f1fb46e2b29304d"
+        };
         
-        <!-- Active bet info & live potential win -->
-        <div class="current-bet-info" id="betStatusPanel">
-            <div>📌 NO ACTIVE BET</div>
-        </div>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
         
-        <button id="betBtn" class="btn-main btn-bet">🚀 PLACE BET</button>
-        <button id="cashoutBtn" class="btn-main btn-cash">💸 CASH OUT</button>
-        <button id="waitingBtn" class="btn-main btn-wait">⏳ BET PLACED</button>
-    </div>
-</div>
-<div class="admin-console">⚙️ ADMIN: setCrashPoint(3.88)  |  triggerCrash()</div>
-
-<script type="importmap">
-    {
-        "imports": {
-            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-            "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
-        }
-    }
-</script>
-
-<script type="module">
-    import { initializeApp } from "firebase/app";
-    import { getDatabase, ref, onValue, set, update, get } from "firebase/database";
-
-    // Firebase Config
-    const firebaseConfig = {
-        apiKey: "AIzaSyDt-HaWzUcM86DBUMBQbyVKxKMqF-ciafw",
-        authDomain: "aviator-4ad1c.firebaseapp.com",
-        databaseURL: "https://aviator-4ad1c-default-rtdb.firebaseio.com",
-        projectId: "aviator-4ad1c",
-        storageBucket: "aviator-4ad1c.firebasestorage.app",
-        messagingSenderId: "36301605622",
-        appId: "1:36301605622:web:68815b8ca921683e4a7ad7"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const playerId = "User_" + Math.floor(Math.random() * 9999);
-    document.getElementById('u-id').innerText = playerId;
-
-    // ===================== GAME STATE =====================
-    let balance = 100.00;
-    let activeBetAmount = null;        // current round's bet amount (if placed)
-    let currentMultiplier = 1.00;
-    let gameStatus = "waiting";        // waiting, flying, crashed
-    let crashPoint = 3.44;              // default crash multiplier (admin adjustable)
-    let multiplierInterval = null;
-    let isCrashedThisRound = false;
-    let profitLive = 0.00;              // potential profit = bet * current multiplier
-    
-    // DOM Elements
-    const balanceSpan = document.getElementById('balance');
-    const multiplierDiv = document.getElementById('multiplier');
-    const countdownScene = document.getElementById('countdown-scene');
-    const planeContainer = document.getElementById('plane-container');
-    const betBtn = document.getElementById('betBtn');
-    const cashoutBtn = document.getElementById('cashoutBtn');
-    const waitingBtn = document.getElementById('waitingBtn');
-    const betAmountInput = document.getElementById('betAmount');
-    const betStatusPanel = document.getElementById('betStatusPanel');
-    const profitAmountSpan = document.getElementById('profitAmount');
-    
-    // Helper: Update balance UI
-    function updateBalanceUI() {
-        balanceSpan.innerText = balance.toFixed(2);
-    }
-    
-    // Live profit update (দেখাবে বর্তমান মাল্টিপ্লায়ারে কত টাকা জিতবে)
-    function updateLiveProfit() {
-        if (activeBetAmount && activeBetAmount > 0 && gameStatus === "flying" && !isCrashedThisRound) {
-            profitLive = activeBetAmount * currentMultiplier;
-            profitAmountSpan.innerText = `$${profitLive.toFixed(2)}`;
-            profitAmountSpan.style.color = "#2ecc71";
-            if (profitLive > activeBetAmount * 1.5) profitAmountSpan.style.textShadow = "0 0 6px #00ff88";
-        } else if (activeBetAmount && gameStatus === "waiting") {
-            profitLive = activeBetAmount * 1.00;
-            profitAmountSpan.innerText = `$${profitLive.toFixed(2)} (ready)`;
-            profitAmountSpan.style.color = "#ffaa66";
-        } else {
-            profitAmountSpan.innerText = "$0.00";
-            profitAmountSpan.style.color = "#888";
-        }
-        // update panel info
-        if (activeBetAmount && activeBetAmount > 0) {
-            if (gameStatus === "flying") {
-                betStatusPanel.innerHTML = `<div>🎯 ACTIVE BET: <span>$${activeBetAmount.toFixed(2)}</span> @ ${currentMultiplier.toFixed(2)}x</div>
-                                            <div style="font-size:13px; color:#2ecc71;">✨ POTENTIAL WIN: $${(activeBetAmount * currentMultiplier).toFixed(2)}</div>`;
-            } else if (gameStatus === "waiting") {
-                betStatusPanel.innerHTML = `<div>⏳ BET READY: <span>$${activeBetAmount.toFixed(2)}</span> waiting for flight</div>
-                                            <div style="font-size:12px; color:#ffaa44;">Next round auto cash possible</div>`;
+        // DOM Elements
+        const amountSpan = document.getElementById('display-amount');
+        const numberSpan = document.getElementById('display-number');
+        const trxInput = document.getElementById('trx-input');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        // Get amount from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get('amount') || "0";
+        amountSpan.innerText = amount;
+        
+        // Helper: Show Toast Message
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastMsg');
+            toast.innerText = message || (isError ? "❌ সমস্যা হয়েছে!" : "✅ সফল!");
+            if(isError) {
+                toast.style.background = "rgba(185, 28, 28, 0.95)";
+                toast.style.color = "#fff";
             } else {
-                betStatusPanel.innerHTML = `<div>⚠️ BET LOST / Crashed</div>`;
+                toast.style.background = "rgba(30, 41, 59, 0.95)";
+                toast.style.color = "#fff";
             }
-        } else {
-            betStatusPanel.innerHTML = `<div>📌 NO ACTIVE BET</div><div style="font-size:11px;">Place bet before flight</div>`;
-        }
-    }
-    
-    // ========== FLIGHT MECHANICS (climb till crash point then dive) ==========
-    function startFlight() {
-        if (multiplierInterval) clearInterval(multiplierInterval);
-        gameStatus = "flying";
-        isCrashedThisRound = false;
-        currentMultiplier = 1.00;
-        multiplierDiv.style.display = "block";
-        multiplierDiv.innerText = "1.00x";
-        multiplierDiv.style.color = "white";
-        countdownScene.style.display = "none";
-        
-        // Show plane
-        planeContainer.style.display = "block";
-        gsap.killTweensOf(planeContainer);
-        gsap.set(planeContainer, { x: -180, y: 0, opacity: 1, rotation: 0 });
-        
-        // If user has active bet, enable cashout button
-        if (activeBetAmount && activeBetAmount > 0) {
-            cashoutBtn.style.display = "block";
-            betBtn.style.display = "none";
-            waitingBtn.style.display = "none";
-        } else {
-            cashoutBtn.style.display = "none";
-            betBtn.style.display = "block";
-            waitingBtn.style.display = "none";
+            toast.className = "toast-custom show";
+            setTimeout(() => {
+                toast.className = "toast-custom";
+                setTimeout(() => {
+                    toast.style.background = "rgba(30,41,59,0.95)";
+                }, 300);
+            }, 2800);
         }
         
-        updateLiveProfit();
+        // -------- UNIQUE TrxID CHECK (এক TrxID দুইবার কাজ করবে না) --------
+        // ফায়ারবেসে 'usedTrxids' collection অথবা payments এ আগে থেকে চেক করবো
+        async function isTrxIdUnique(trxId) {
+            if(!trxId) return false;
+            const upperTrx = trxId.toUpperCase().trim();
+            
+            try {
+                // প্রথমে payments collection এ এই TrxID আগে আছে কিনা চেক করি (Pending অথবা Approved সব ধরনের)
+                const existingPayment = await db.collection("payments")
+                    .where("trxid", "==", upperTrx)
+                    .limit(1)
+                    .get();
+                
+                if(!existingPayment.empty) {
+                    return false; // TrxID already exists!
+                }
+                
+                // অতিরিক্ত নিরাপত্তা: used_trxids collection এও চেক করতে পারি (ডুপ্লিকেট প্রতিরোধ)
+                const usedRef = await db.collection("used_trxids").doc(upperTrx).get();
+                if(usedRef.exists) {
+                    return false;
+                }
+                
+                return true;
+            } catch (err) {
+                console.error("TrxID check error:", err);
+                return false;
+            }
+        }
         
-        // Multiplier increase every 35ms (smooth)
-        multiplierInterval = setInterval(() => {
-            if (gameStatus !== "flying") return;
-            let newMult = currentMultiplier + 0.012;
-            if (newMult >= crashPoint && !isCrashedThisRound) {
-                // Hit crash point!
-                newMult = crashPoint;
-                currentMultiplier = newMult;
-                multiplierDiv.innerText = currentMultiplier.toFixed(2) + "x";
-                updateLiveProfit();
-                triggerCrashEvent();
+        // Mark TrxID as used after successful submission (double protection)
+        async function markTrxAsUsed(trxId) {
+            try {
+                await db.collection("used_trxids").doc(trxId).set({
+                    trxid: trxId,
+                    usedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch(e) { console.warn("mark used error", e); }
+        }
+        
+        // -------- SEND PAYMENT WITH LOADING & UNIQUE TrxID VALIDATION --------
+        window.sendPayment = async function() {
+            const trx = trxInput.value.trim();
+            if(!trx) {
+                showToast("❌ অনুগ্রহ করে TrxID লিখুন!", true);
                 return;
             }
-            if (gameStatus === "flying") {
-                currentMultiplier = parseFloat(newMult.toFixed(4));
-                multiplierDiv.innerText = currentMultiplier.toFixed(2) + "x";
-                updateLiveProfit();
-                updatePlanePosition(currentMultiplier, crashPoint);
+            
+            const finalTrx = trx.toUpperCase();
+            const payAmount = amount;
+            
+            // Show loading state on button
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = `<span class="loading-spinner"></span> যাচাই করা হচ্ছে...`;
+            submitBtn.disabled = true;
+            
+            try {
+                // Step 1: Check if TrxID is unique (একবার ব্যবহার করা TrxID আবার নিবে না)
+                const isUnique = await isTrxIdUnique(finalTrx);
+                if(!isUnique) {
+                    showToast("⚠️ এই TrxID আগেই ব্যবহার করা হয়েছে! ভিন্ন TrxID দিন।", true);
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
+                    trxInput.value = "";
+                    trxInput.focus();
+                    return;
+                }
+                
+                // Step 2: Add to Firestore payments
+                await db.collection("payments").add({
+                    trxid: finalTrx,
+                    amount: payAmount,
+                    method: "bkash",
+                    status: "Pending",
+                    time: firebase.firestore.FieldValue.serverTimestamp(),
+                    verified: false
+                });
+                
+                // Step 3: Mark as used in separate collection to ensure uniqueness globally
+                await markTrxAsUsed(finalTrx);
+                
+                // Success
+                showToast("✅ পেমেন্ট রিকোয়েস্ট সফলভাবে জমা হয়েছে! অপেক্ষা করুন।");
+                trxInput.value = ""; // clear input
+                
+                // Reset button
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+                
+                // Optional: small haptic feedback
+                trxInput.focus();
+                
+            } catch (err) {
+                console.error("Payment Error:", err);
+                let errorMsg = "❌ পেমেন্ট জমা দিতে ব্যর্থ! নেটওয়ার্ক চেক করুন।";
+                if(err.message) errorMsg = `❌ ${err.message}`;
+                showToast(errorMsg, true);
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
             }
-        }, 35);
+        };
         
-        updatePlanePosition(1.00, crashPoint);
-    }
-    
-    // Plane path: climbs up as multiplier increases, after crash it dives (crash event handles)
-    function updatePlanePosition(mult, crashLimit) {
-        if (!planeContainer) return;
-        let progress = Math.min(mult / crashLimit, 1.2);
-        let xPos, yPos;
-        if (mult < crashLimit) {
-            let t = mult / crashLimit;
-            xPos = -150 + (t * 700);
-            yPos = -(t * 135);   // climb upward
-        } else {
-            let overshoot = Math.min((mult - crashLimit) / 0.8, 1.2);
-            xPos = 550 + (overshoot * 280);
-            yPos = -115 + (overshoot * 160);
-        }
-        gsap.to(planeContainer, { x: xPos, y: yPos, duration: 0.12, overwrite: true });
-    }
-    
-    // CRASH EVENT
-    function triggerCrashEvent() {
-        if (isCrashedThisRound) return;
-        isCrashedThisRound = true;
-        gameStatus = "crashed";
-        if (multiplierInterval) { clearInterval(multiplierInterval); multiplierInterval = null; }
+        // -------- REAL-TIME LOADING: PERSONAL NUMBER (BKASH NUMBER) FROM FIRESTORE --------
+        // Loading state with skeleton effect while fetching number
+        numberSpan.innerText = "লোড হচ্ছে...";
+        numberSpan.classList.add("skeleton-shimmer", "text-transparent", "bg-clip-text");
         
-        // crash visual
-        const flash = document.createElement('div');
-        flash.classList.add('crash-flash');
-        document.querySelector('.game-screen').appendChild(flash);
-        setTimeout(() => flash.remove(), 500);
-        multiplierDiv.style.color = "#ff6666";
-        multiplierDiv.style.textShadow = "0 0 12px red";
-        
-        gsap.to(planeContainer, { duration: 0.6, y: 210, rotation: 40, opacity: 0.5, ease: "back.in(1.2)" });
-        
-        // If active bet exists and not cashed out -> LOST
-        if (activeBetAmount && activeBetAmount > 0) {
-            // bet already deducted, so just clear
-            update(ref(db, `active_bets/${playerId}`), { status: "crashed", multiplier: currentMultiplier.toFixed(2) }).catch(console.warn);
-            activeBetAmount = null;
-        }
-        
-        cashoutBtn.style.display = "none";
-        betBtn.style.display = "block";
-        waitingBtn.style.display = "none";
-        updateLiveProfit();
-        
-        // schedule next round
-        scheduleNextRound();
-    }
-    
-    // COUNTDOWN to next round
-    let countdownTimer = null;
-    function scheduleNextRound() {
-        if (countdownTimer) clearInterval(countdownTimer);
-        gameStatus = "waiting";
-        countdownScene.style.display = "flex";
-        multiplierDiv.style.display = "none";
-        planeContainer.style.display = "none";
-        let count = 4;
-        const cdSpan = document.getElementById('cd-number');
-        cdSpan.innerText = count;
-        countdownTimer = setInterval(() => {
-            count--;
-            if (count <= 0) {
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-                startNewFlight();
+        // Subscribe to bKash number from settings doc (Admin panel থেকে রিয়েলটাইম আপডেট)
+        let initialLoadDone = false;
+        const unsubscribeNumber = db.collection("settings").doc("bkash").onSnapshot((doc) => {
+            if(doc.exists && doc.data().number) {
+                const bkashNumber = doc.data().number;
+                numberSpan.innerText = bkashNumber;
+                numberSpan.classList.remove("skeleton-shimmer", "text-transparent", "bg-clip-text");
+                numberSpan.classList.add("text-gray-800");
+                if(!initialLoadDone) {
+                    // first load complete, remove any shimmer effect
+                    initialLoadDone = true;
+                }
             } else {
-                cdSpan.innerText = count;
+                numberSpan.innerText = "নম্বর সেট নেই";
+                numberSpan.classList.remove("skeleton-shimmer", "text-transparent", "bg-clip-text");
+                numberSpan.classList.add("text-gray-500", "text-xl");
+                if(!initialLoadDone) {
+                    initialLoadDone = true;
+                }
             }
-        }, 1000);
-        updateLiveProfit();
-    }
-    
-    function startNewFlight() {
-        if (multiplierInterval) clearInterval(multiplierInterval);
-        currentMultiplier = 1.00;
-        multiplierDiv.innerText = "1.00x";
-        multiplierDiv.style.color = "white";
-        gameStatus = "flying";
-        isCrashedThisRound = false;
-        startFlight();
-    }
-    
-    // ========== BETTING SYSTEM ==========
-    function placeBet() {
-        if (gameStatus !== "waiting") {
-            alert("⏳ Cannot place bet now! Wait for next round.");
-            return false;
-        }
-        let betVal = parseFloat(betAmountInput.value);
-        if (isNaN(betVal) || betVal <= 0.5) {
-            alert("Enter valid bet amount (min $0.50)");
-            return false;
-        }
-        if (betVal > balance) {
-            alert("❌ Insufficient balance!");
-            return false;
-        }
-        // deduct balance
-        balance -= betVal;
-        updateBalanceUI();
-        activeBetAmount = betVal;
-        // firebase record
-        set(ref(db, `active_bets/${playerId}`), { userId: playerId, amount: betVal, status: "active", roundTime: Date.now() }).catch(console.warn);
+        }, (error) => {
+            console.error("Firestore number error:", error);
+            numberSpan.innerText = "নেটওয়ার্ক ত্রুটি";
+            numberSpan.classList.remove("skeleton-shimmer", "text-transparent", "bg-clip-text");
+            numberSpan.classList.add("text-red-500", "text-base");
+        });
         
-        // UI update
-        betBtn.style.display = "none";
-        waitingBtn.style.display = "none";
-        cashoutBtn.style.display = "none"; // will appear when flight starts
-        if (gameStatus === "waiting") {
-            betStatusPanel.innerHTML = `<div>✅ BET PLACED: <span>$${betVal.toFixed(2)}</span></div>
-                                        <div style="font-size:12px;">Flight starts soon → Cashout anytime</div>`;
-        }
-        updateLiveProfit();
-        return true;
-    }
-    
-    function cashOut() {
-        if (gameStatus !== "flying") {
-            alert("✈️ Flight not active or already crashed!");
-            return false;
-        }
-        if (!activeBetAmount || activeBetAmount <= 0) {
-            alert("No active bet!");
-            return false;
-        }
-        if (isCrashedThisRound) {
-            alert("💥 Already crashed! Cannot cash out.");
-            return false;
-        }
-        let winAmount = activeBetAmount * currentMultiplier;
-        balance += winAmount;
-        updateBalanceUI();
-        
-        // record win
-        update(ref(db, `active_bets/${playerId}`), { status: "cashed", multiplier: currentMultiplier.toFixed(2), profit: winAmount.toFixed(2) }).catch(console.warn);
-        
-        // success feedback
-        const winToast = document.createElement('div');
-        winToast.innerText = `🎉 CASHED OUT! +$${winAmount.toFixed(2)} at ${currentMultiplier.toFixed(2)}x 🎉`;
-        winToast.style.position = 'fixed'; winToast.style.bottom = '100px'; winToast.style.left = '20px';
-        winToast.style.background = '#2ecc71'; winToast.style.color = '#000'; winToast.style.fontWeight = 'bold';
-        winToast.style.padding = '10px 20px'; winToast.style.borderRadius = '40px'; winToast.style.zIndex = '999';
-        document.body.appendChild(winToast);
-        setTimeout(() => winToast.remove(), 2000);
-        
-        activeBetAmount = null;
-        cashoutBtn.style.display = "none";
-        betBtn.style.display = "block";
-        waitingBtn.style.display = "none";
-        updateLiveProfit();
-        return true;
-    }
-    
-    // ========== ADMIN CONTROLS (Plane climbs to X then descends) ==========
-    window.setCrashPoint = function(newPoint) {
-        if (typeof newPoint !== 'number' || newPoint <= 1.01) {
-            console.warn("Crash point must be > 1.01");
-            return false;
-        }
-        crashPoint = newPoint;
-        set(ref(db, 'admin_config/crash_multiplier'), crashPoint).catch(console.warn);
-        console.log(`✈️ ADMIN: Crash point = ${crashPoint}x — Plane will climb to ${crashPoint}x then descend & crash!`);
-        const toast = document.createElement('div');
-        toast.innerText = `⚙️ Crash target updated: ${crashPoint.toFixed(2)}x`;
-        toast.style.position = 'fixed'; toast.style.bottom = '50px'; toast.style.right = '20px';
-        toast.style.background = '#ffaa33dd'; toast.style.padding = '6px 14px'; toast.style.borderRadius = '30px';
-        toast.style.color = '#000'; toast.style.fontWeight = 'bold'; toast.style.zIndex = '999';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 1800);
-        return true;
-    };
-    
-    window.triggerCrash = function() {
-        if (gameStatus === "flying" && !isCrashedThisRound) {
-            triggerCrashEvent();
-            console.log("💥 Admin forced crash!");
-        } else console.warn("Game not flying or already crashed");
-    };
-    
-    // Load initial crash point from firebase
-    get(ref(db, 'admin_config/crash_multiplier')).then(snap => {
-        if (snap.exists()) crashPoint = snap.val();
-        else set(ref(db, 'admin_config/crash_multiplier'), 3.44);
-        console.log(`✅ Crash point: ${crashPoint}x`);
-    }).catch(() => { crashPoint = 3.44; });
-    
-    // Firebase listener for external admin (optional)
-    onValue(ref(db, 'admin_config/crash_multiplier'), (snap) => {
-        if (snap.exists() && typeof snap.val() === 'number' && snap.val() > 1.0) {
-            crashPoint = snap.val();
-        }
-    });
-    
-    // ========== EVENT LISTENERS ==========
-    document.getElementById('betBtn').onclick = () => placeBet();
-    document.getElementById('cashoutBtn').onclick = () => cashOut();
-    document.querySelector('.adj-dec').onclick = () => {
-        let v = parseFloat(betAmountInput.value);
-        if (!isNaN(v)) betAmountInput.value = Math.max(0.5, v - 1).toFixed(2);
-    };
-    document.querySelector('.adj-inc').onclick = () => {
-        let v = parseFloat(betAmountInput.value);
-        if (!isNaN(v)) betAmountInput.value = (v + 1).toFixed(2);
-    };
-    
-    // INIT GAME
-    function init() {
-        balance = 100.00;
-        updateBalanceUI();
-        activeBetAmount = null;
-        gameStatus = "waiting";
-        isCrashedThisRound = false;
-        countdownScene.style.display = "flex";
-        multiplierDiv.style.display = "none";
-        planeContainer.style.display = "none";
-        betBtn.style.display = "block";
-        cashoutBtn.style.display = "none";
-        waitingBtn.style.display = "none";
-        document.getElementById('cd-number').innerText = "3";
-        updateLiveProfit();
-        
-        let initialCd = 3;
-        let startInterval = setInterval(() => {
-            if (initialCd <= 1) {
-                clearInterval(startInterval);
-                startNewFlight();
-            } else {
-                initialCd--;
-                document.getElementById('cd-number').innerText = initialCd;
+        // -------- COPY NUMBER FUNCTION WITH TOAST & LOADING CHECK --------
+        window.copyNumber = function() {
+            let numberText = numberSpan.innerText;
+            // Don't copy if it's placeholder / error / loading text
+            if(numberText === "লোড হচ্ছে..." || numberText === "নম্বর সেট নেই" || numberText === "নেটওয়ার্ক ত্রুটি" || !numberText) {
+                showToast("❌ বৈধ নম্বর পাওয়া যায়নি, একটু পরে চেষ্টা করুন।", true);
+                return;
             }
-        }, 1000);
-    }
-    init();
-</script>
+            
+            // Extract only digits and plus if needed (clean number)
+            let cleanNumber = numberText.replace(/[^\d+]/g, '');
+            if(!cleanNumber) cleanNumber = numberText;
+            
+            navigator.clipboard.writeText(cleanNumber).then(() => {
+                showToast("📋 bKash নম্বর কপি হয়েছে! (Send Money করুন)");
+                // Visual feedback: temporary highlight effect on number card
+                const card = document.getElementById('number-container');
+                card.style.backgroundColor = "#fee2e2";
+                setTimeout(() => {
+                    card.style.backgroundColor = "";
+                }, 300);
+            }).catch(() => {
+                showToast("❌ কপি করতে ব্যর্থ, ম্যানুয়ালি কপি করুন।", true);
+            });
+        };
+        
+        // Add enter key support for transaction input
+        trxInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendPayment();
+            }
+        });
+        
+        // Additional: Check if amount is valid numeric
+        if(isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+            if(amount !== "0") amountSpan.innerText = "0";
+        }
+        
+        // Beautify: auto uppercase on trx input
+        trxInput.addEventListener("input", function(e) {
+            this.value = this.value.toUpperCase();
+        });
+        
+        // Cleanup on page unload (optional)
+        window.addEventListener("beforeunload", () => {
+            if(unsubscribeNumber) unsubscribeNumber();
+        });
+        
+        // Small console log to confirm that TrxID duplicate protection active
+        console.log("✅ পেমেন্ট সিস্টেম রেডি | ট্রানজেকশন আইডি ইউনিক চেক সক্রিয় | লোডিং ইফেক্ট চালু");
+    </script>
 </body>
-    </html>      
+                            </html>                                          
