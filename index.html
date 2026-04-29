@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>bKash Payment | Life GrowBD</title>
+    <title>bKash Payment | Sotota Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,800&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -15,7 +15,7 @@
             visibility: hidden; min-width: 280px; background: #1e293b; color: white;
             text-align: center; border-radius: 2rem; padding: 12px 20px; position: fixed;
             z-index: 1000; bottom: 30px; left: 50%; transform: translateX(-50%) scale(0.9);
-            opacity: 0; transition: all 0.25s ease; font-weight: 600;
+            opacity: 0; transition: all 0.25s ease; font-weight: 600; backdrop-filter: blur(8px);
             background: rgba(30,41,59,0.95); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.2);
         }
         .toast-custom.show { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
@@ -24,49 +24,21 @@
             border-radius: 50%; border-top-color: white; animation: spin 0.6s linear infinite; margin-right: 8px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        button:disabled { opacity: 0.7; cursor: not-allowed; }
-        .trx-input:focus { box-shadow: 0 0 0 3px rgba(209,32,83,0.2); border-color: #D12053; outline: none; }
-        .copy-card:active { transform: scale(0.98); }
-        .btn-pulse:active { transform: scale(0.97); }
-        .video-help {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border-radius: 1rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid #f59e0b;
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%; animation: shimmer 1.2s infinite;
         }
-        .video-help:hover { transform: scale(1.02); }
-        .video-help a { color: #92400e; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1rem; }
-        .bkash-number-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1rem;
-            border: 2px dashed #fbc4d0;
-            cursor: pointer;
-            transition: 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .bkash-number-card:hover { border-color: #D12053; background: #fff0f3; }
-        .payment-type-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-        .payment-type-delivery { background: #dbeafe; color: #1e40af; }
-        .payment-type-deposit { background: #dcfce7; color: #166534; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .banner-img { width: 150px; height: 90px; object-fit: cover; border-radius: 12px; flex-shrink: 0; border: 1px solid #eee; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center min-h-screen p-4">
 
     <div class="max-w-md w-full">
         <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <!-- Header -->
             <div class="bkash-gradient p-6 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <div class="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
@@ -74,230 +46,208 @@
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/>
                         </svg>
                     </div>
-                    <span class="text-white font-black text-xl tracking-tight">Life GrowBD</span>
+                    <span class="text-white font-black text-xl tracking-tight">bKash Merchant</span>
                 </div>
                 <div class="text-white text-right">
-                    <p class="text-[10px] uppercase font-bold opacity-80">Payable Amount</p>
-                    <h2 class="text-3xl font-black">৳ <span id="display-amount">0</span></h2>
+                    <p class="text-[10px] uppercase font-bold opacity-80 tracking-[0.15em]">Payable Amount</p>
+                    <h2 class="text-3xl font-black tracking-tight">৳ <span id="display-amount" class="tabular-nums">0</span></h2>
                 </div>
             </div>
 
-            <div class="p-6 pt-7">
-                <!-- ভিডিও হেল্প সেকশন -->
-                <div id="video-help-container" class="video-help" style="display:none;" onclick="openVideo()">
-                    <a href="#" onclick="return false;">
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M10 15l5-3-5-3v6z"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                        </svg>
-                        🎥 <span id="video-help-text">কিভাবে পেমেন্ট করবেন? ভিডিও দেখে আসুন</span>
-                    </a>
-                </div>
-
-                <!-- পেমেন্ট টাইপ ব্যাজ -->
-                <div class="mb-4 text-center">
-                    <span id="payment-type-badge" class="payment-type-badge payment-type-delivery">ডেলিভারি চার্জ</span>
-                </div>
-
-                <div class="bg-pink-50 border-l-[5px] border-[#D12053] p-4 rounded-2xl mb-7">
-                    <div class="flex gap-3">
-                        <span class="text-[#D12053] text-xl">📌</span>
-                        <p class="text-xs font-semibold text-gray-700">
-                            <span class="font-black text-[#D12053]">Send Money</span> করুন নিচের bKash নম্বরে। টাকা পাঠানোর পর <span class="font-bold">TrxID</span> টি দিন।
-                            <span class="block text-[11px] mt-1 text-gray-600">⚠️ একটি TrxID শুধু একবার ব্যবহার করা যাবে</span>
-                        </p>
+            <div class="py-6">
+                <!-- How to Pay Banners (Admin Links) -->
+                <div class="px-6 mb-6">
+                    <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest block mb-3 ml-1">
+                        কিভাবে পেমেন্ট করবেন? (ধাপগুলো দেখুন)
+                    </label>
+                    <div id="banner-list" class="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+                        <div class="banner-img skeleton-shimmer"></div>
+                        <div class="banner-img skeleton-shimmer"></div>
+                        <div class="banner-img skeleton-shimmer"></div>
                     </div>
                 </div>
 
-                <div class="mb-8">
-                    <label class="text-[11px] font-bold text-gray-500 uppercase block mb-2">bKash নম্বর</label>
-                    <div id="number-container" onclick="copyNumber()" class="bkash-number-card">
-                        <span id="display-number" class="text-3xl font-black text-gray-800">লোড হচ্ছে...</span>
-                        <div class="bkash-gradient text-white p-2.5 rounded-xl">📋</div>
+                <div class="px-6">
+                    <!-- Info Alert -->
+                    <div class="bg-pink-50 border-l-[5px] border-[#D12053] p-4 rounded-2xl mb-7">
+                        <div class="flex items-start gap-3">
+                            <span class="text-[#D12053] text-xl">📌</span>
+                            <p class="text-xs font-semibold text-gray-700 leading-relaxed">
+                                <span class="font-black text-[#D12053]">Send Money</span> করুন নিচের bKash নম্বরে। টাকা পাঠানোর পর <span class="font-bold">TrxID</span> টি দিন। 
+                            </p>
+                        </div>
                     </div>
-                    <p class="text-[10px] text-gray-400 text-center mt-2">🔁 নম্বর কপি করতে ক্লিক করুন</p>
-                </div>
 
-                <div class="space-y-6">
-                    <div>
-                        <label class="text-[11px] font-bold text-gray-500 uppercase block mb-2">Transaction ID (TrxID)</label>
-                        <input type="text" id="trx-input" placeholder="যেমন: 8N7A9X2K5L" autocomplete="off" class="w-full p-5 bg-gray-50 border-2 border-gray-200 focus:border-[#D12053] focus:outline-none text-center font-mono font-bold text-xl uppercase rounded-2xl trx-input">
+                    <!-- Personal Number -->
+                    <div class="mb-8">
+                        <label class="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2 ml-1">পেমেন্ট নম্বর (Personal)</label>
+                        <div onclick="copyNumber()" class="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-dashed border-pink-200 hover:border-[#D12053] cursor-pointer transition-all active:scale-95">
+                            <span id="display-number" class="text-3xl font-black tracking-tighter text-gray-800">লোড হচ্ছে...</span>
+                            <div class="bkash-gradient text-white p-2.5 rounded-xl">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <button id="submit-btn" onclick="sendPayment()" class="w-full bkash-gradient text-white font-bold py-5 rounded-2xl shadow-lg uppercase text-sm tracking-wider flex items-center justify-center gap-2 btn-pulse">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        পেমেন্ট নিশ্চিত করুন
-                    </button>
+
+                    <!-- TrxID Input -->
+                    <div class="space-y-6">
+                        <div>
+                            <label class="text-[11px] font-bold text-gray-400 uppercase ml-2 block mb-2 tracking-widest">Transaction ID (TrxID)</label>
+                            <input type="text" id="trx-input" placeholder="8N7A9X2K5L" class="w-full p-5 bg-gray-50 border-2 border-gray-200 focus:border-[#D12053] focus:outline-none text-center font-mono font-bold text-xl uppercase rounded-2xl transition-all">
+                        </div>
+                        
+                        <button id="submit-btn" onclick="sendPayment()" class="w-full bkash-gradient text-white font-bold py-5 rounded-2xl shadow-lg uppercase text-sm tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+                            Confirm & Submit
+                        </button>
+                    </div>
                 </div>
             </div>
 
+            <!-- Footer -->
             <div class="bg-gray-50 p-4 text-center border-t">
-                <p class="text-[10px] text-gray-400 font-bold uppercase">🔒 Secure Payment • Life GrowBD</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">🔒 Secure Payment • Sotota Shop</p>
             </div>
         </div>
     </div>
 
-    <div id="toastMsg" class="toast-custom"></div>
+    <div id="toastMsg" class="toast-custom">✨ কপি হয়েছে!</div>
 
     <script>
+        // Firebase কনফিগারেশন
         const firebaseConfig = {
-            apiKey: "AIzaSyCTsWCt67Yq4loUn1oUbNJZ2vBrPpXZbvI",
-            authDomain: "my-apps-1a158.firebaseapp.com",
-            projectId: "my-apps-1a158",
-            storageBucket: "my-apps-1a158.firebasestorage.app",
-            messagingSenderId: "973100739981",
-            appId: "1:973100739981:web:63d7d2acd2b715a70561c4",
-            databaseURL: "https://my-apps-1a158-default-rtdb.firebaseio.com/"
+            apiKey: "AIzaSyBiG7ssePTyaKavznWmQsdpAq4Q2NUWyeA",
+            authDomain: "my-app-7e2b8.firebaseapp.com",
+            databaseURL: "https://my-app-7e2b8-default-rtdb.firebaseio.com",
+            projectId: "my-app-7e2b8",
+            storageBucket: "my-app-7e2b8.firebasestorage.app",
+            messagingSenderId: "683941019095",
+            appId: "1:683941019095:web:6a82c99ca567aada679f92"
         };
         
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const db = firebase.firestore();
+        
+        // URL থেকে প্যারামিটার নেওয়া
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        const amount = urlParams.get('amount') || "0";
+        const method = urlParams.get('method') || "bkash";
         
         const amountSpan = document.getElementById('display-amount');
         const numberSpan = document.getElementById('display-number');
+        const bannerList = document.getElementById('banner-list');
         const trxInput = document.getElementById('trx-input');
         const submitBtn = document.getElementById('submit-btn');
-        const paymentTypeBadge = document.getElementById('payment-type-badge');
-        const videoHelpContainer = document.getElementById('video-help-container');
-        const videoHelpText = document.getElementById('video-help-text');
-        
-        let currentVideoLink = "";
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const amount = urlParams.get('amount') || "0";
-        const type = urlParams.get('type') || "delivery";
-        const orderId = urlParams.get('orderId') || "";
         
         amountSpan.innerText = amount;
         
-        // টাইপ অনুযায়ী ব্যাজ স্টাইল ও টেক্সট সেট করা
-        if(type === 'deposit') {
-            paymentTypeBadge.textContent = "ডিপোজিট (টাকা জমা)";
-            paymentTypeBadge.className = "payment-type-badge payment-type-deposit";
-        } else {
-            paymentTypeBadge.textContent = "ডেলিভারি চার্জ";
-            paymentTypeBadge.className = "payment-type-badge payment-type-delivery";
+        // পেমেন্ট মেথড অনুযায়ী টাইটেল ও গ্রেডিয়েন্ট পরিবর্তন
+        if(method === 'nagad') {
+            document.querySelector('.bkash-gradient').style.background = 'linear-gradient(135deg, #F5A623 0%, #d48a1a 100%)';
+            document.querySelector('.bkash-gradient span').innerText = 'Nagad Merchant';
+            document.querySelector('.bg-pink-50').classList.remove('bg-pink-50');
+            document.querySelector('.bg-pink-50').classList.add('bg-orange-50');
+            document.querySelector('.border-l-[5px]').style.borderLeftColor = '#F5A623';
+            document.querySelector('.font-black.text-[#D12053]').style.color = '#F5A623';
+            document.querySelector('.font-black.text-[#D12053]').innerText = 'Send Money';
+        } else if(method === 'rocket') {
+            document.querySelector('.bkash-gradient').style.background = 'linear-gradient(135deg, #7C3AED 0%, #5b21b6 100%)';
+            document.querySelector('.bkash-gradient span').innerText = 'Rocket Merchant';
         }
-        
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toastMsg');
-            toast.innerText = message;
-            toast.style.background = isError ? "rgba(220, 38, 38, 0.95)" : "rgba(30, 41, 59, 0.95)";
-            toast.className = "toast-custom show";
-            setTimeout(() => toast.className = "toast-custom", 3000);
-        }
-        
-        function openVideo() {
-            if(currentVideoLink) {
-                window.open(currentVideoLink, '_blank');
-            } else {
-                showToast("❌ ভিডিও লিংক পাওয়া যায়নি!", true);
-            }
-        }
-        
-        async function isTrxIdUnique(trxId) {
-            if(!trxId) return false;
-            const upperTrx = trxId.toUpperCase().trim();
-            try {
-                const snapshot = await db.ref('payment_requests').orderByChild('transactionId').equalTo(upperTrx).once('value');
-                return !snapshot.exists();
-            } catch(err) { return false; }
-        }
-        
-        window.sendPayment = async function() {
-            const trx = trxInput.value.trim();
-            if(!trx) {
-                showToast("❌ TrxID দিন!", true);
-                return;
-            }
-            
-            const finalTrx = trx.toUpperCase();
-            const payAmount = parseFloat(amount);
-            
-            submitBtn.innerHTML = `<span class="loading-spinner"></span> যাচাই করা হচ্ছে...`;
-            submitBtn.disabled = true;
-            
-            try {
-                const isUnique = await isTrxIdUnique(finalTrx);
-                if(!isUnique) {
-                    showToast("⚠️ এই TrxID আগেই ব্যবহার করা হয়েছে!", true);
-                    submitBtn.innerHTML = `পেমেন্ট নিশ্চিত করুন`;
-                    submitBtn.disabled = false;
-                    trxInput.value = "";
-                    return;
+
+        // ব্যানার লোড
+        db.collection("settings").doc("banners").onSnapshot((doc) => {
+            if(doc.exists) {
+                const data = doc.data();
+                let bannerHTML = '';
+                for(let i=1; i<=6; i++) {
+                    const imgUrl = data[`img${i}`];
+                    if(imgUrl) {
+                        bannerHTML += `<img src="${imgUrl}" class="banner-img" alt="Step ${i}">`;
+                    }
                 }
-                
-                // সব রিকোয়েস্ট payment_requests এ যাবে
-                await db.ref('payment_requests').push().set({
-                    transactionId: finalTrx,
-                    amount: payAmount,
-                    method: "bKash",
-                    type: type,
-                    orderId: orderId,
-                    status: "pending",
-                    createdAt: new Date().toISOString()
-                });
-                
-                // টাইপ অনুযায়ী আলাদা নোডেও রিকোয়েস্ট যাবে
-                if(type === 'delivery') {
-                    await db.ref('delivery_requests').push().set({
-                        transactionId: finalTrx,
-                        amount: payAmount,
-                        method: "bKash",
-                        orderId: orderId,
-                        status: "pending",
-                        createdAt: new Date().toISOString()
-                    });
-                } else if(type === 'deposit') {
-                    await db.ref('deposit_requests').push().set({
-                        transactionId: finalTrx,
-                        amount: payAmount,
-                        method: "bKash",
-                        status: "pending",
-                        createdAt: new Date().toISOString()
-                    });
-                }
-                
-                showToast(`✅ ${type === 'deposit' ? 'ডিপোজিট' : 'পেমেন্ট'} রিকোয়েস্ট সফল!`);
-                trxInput.value = "";
-                submitBtn.innerHTML = `পেমেন্ট নিশ্চিত করুন`;
-                submitBtn.disabled = false;
-                
-                setTimeout(() => window.location.href = "https://lifegrowbd.com/", 2000);
-                
-            } catch (err) {
-                showToast("❌ পেমেন্ট জমা দিতে ব্যর্থ!", true);
-                submitBtn.innerHTML = `পেমেন্ট নিশ্চিত করুন`;
-                submitBtn.disabled = false;
-            }
-        };
-        
-        db.ref('settings').on('value', (snapshot) => {
-            const settings = snapshot.val();
-            if(settings) {
-                numberSpan.innerText = settings.bkashNumber || "01750069517";
-                currentVideoLink = settings.bkashVideoLink || "";
-                if(currentVideoLink) {
-                    videoHelpContainer.style.display = "block";
-                    videoHelpText.innerHTML = "🎥 কিভাবে পেমেন্ট করবেন? ভিডিও দেখে আসুন";
-                } else {
-                    videoHelpContainer.style.display = "none";
-                }
-            } else {
-                numberSpan.innerText = "01750069517";
-                videoHelpContainer.style.display = "none";
+                bannerList.innerHTML = bannerHTML || '<p class="text-xs text-gray-400">ব্যানার পাওয়া যায়নি</p>';
             }
         });
-        
+
+        // পেমেন্ট নম্বর লোড (মেথড অনুযায়ী)
+        db.collection("settings").doc(method).onSnapshot((doc) => {
+            if(doc.exists) numberSpan.innerText = doc.data().number;
+            else numberSpan.innerText = '01XXXXXXXXX';
+        });
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastMsg');
+            toast.innerText = msg;
+            toast.style.background = isError ? "#ef4444" : "#1e293b";
+            toast.className = "toast-custom show";
+            setTimeout(() => { toast.className = "toast-custom"; }, 2500);
+        }
+
         window.copyNumber = function() {
-            let numberText = numberSpan.innerText;
-            if(!numberText || numberText === "লোড হচ্ছে...") { showToast("❌ নম্বর পাওয়া যায়নি", true); return; }
-            navigator.clipboard.writeText(numberText.replace(/[^\d+]/g, '')).then(() => showToast("📋 bKash নম্বর কপি হয়েছে!"));
+            navigator.clipboard.writeText(numberSpan.innerText).then(() => {
+                showToast("📋 নম্বর কপি হয়েছে!");
+            });
         };
-        
-        trxInput.addEventListener("input", function(e) { this.value = this.value.toUpperCase(); });
-        trxInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendPayment(); });
-        
-        console.log("✅ bKash পেমেন্ট সিস্টেম রেডি | টাইপ:", type);
+
+        window.sendPayment = async function() {
+            const trx = trxInput.value.trim().toUpperCase();
+            if(!trx) return showToast("❌ TrxID লিখুন!", true);
+            
+            // যদি orderId না থাকে তাহলে শুধু payments এ সেভ হবে
+            if(!orderId) {
+                showToast("⚠️ অর্ডার আইডি নেই! শুধু পেমেন্ট রেকর্ড করা হবে।", true);
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="loading-spinner"></span> যাচাই হচ্ছে...`;
+
+            try {
+                // ইউনিক TrxID চেক
+                const check = await db.collection("payments").where("trxid", "==", trx).get();
+                if(!check.empty) {
+                    showToast("⚠️ এই TrxID আগেই ব্যবহার হয়েছে!", true);
+                } else {
+                    // পেমেন্ট রেকর্ড সেভ
+                    await db.collection("payments").add({
+                        trxid: trx,
+                        amount: amount,
+                        method: method,
+                        orderId: orderId || null,
+                        status: "Pending",
+                        time: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    // অর্ডার আইডি থাকলে অর্ডার আপডেট করুন TrxID সহ
+                    if(orderId) {
+                        await db.collection("orders").doc(orderId).update({
+                            trx: trx,
+                            paymentStatus: "completed",
+                            paymentTime: new Date().toISOString()
+                        });
+                        showToast("✅ পেমেন্ট সফল! অর্ডার কনফার্ম হয়েছে!");
+                    } else {
+                        showToast("✅ পেমেন্ট রেকর্ড করা হয়েছে!");
+                    }
+                    
+                    trxInput.value = "";
+                    
+                    // 2 সেকেন্ড পর পেজ রিলোড বা ক্লোজ
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("❌ ত্রুটি হয়েছে!", true);
+            }
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = "Confirm & Submit";
+        };
+
+        trxInput.addEventListener("input", function() { this.value = this.value.toUpperCase(); });
     </script>
 </body>
-</html>
+</html>                          
