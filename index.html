@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
@@ -55,6 +55,14 @@
             </div>
 
             <div class="py-6">
+                <!-- Order ID Show (ছোট করে) -->
+                <div class="px-6 mb-3">
+                    <div class="bg-gray-100 rounded-xl p-2 text-center text-xs">
+                        <span class="text-gray-500">অর্ডার আইডি:</span>
+                        <span id="order-id" class="font-mono font-bold text-gray-700">-</span>
+                    </div>
+                </div>
+
                 <!-- How to Pay Banners (Admin Links) -->
                 <div class="px-6 mb-6">
                     <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest block mb-3 ml-1">
@@ -115,7 +123,6 @@
     <div id="toastMsg" class="toast-custom">✨ কপি হয়েছে!</div>
 
     <script>
-        // Firebase কনফিগারেশন
         const firebaseConfig = {
             apiKey: "AIzaSyBiG7ssePTyaKavznWmQsdpAq4Q2NUWyeA",
             authDomain: "my-app-7e2b8.firebaseapp.com",
@@ -140,10 +147,13 @@
         const bannerList = document.getElementById('banner-list');
         const trxInput = document.getElementById('trx-input');
         const submitBtn = document.getElementById('submit-btn');
+        const orderIdSpan = document.getElementById('order-id');
         
         amountSpan.innerText = amount;
+        if(orderId) orderIdSpan.innerText = orderId.substring(0, 8) + '...';
+        else orderIdSpan.innerText = 'N/A';
         
-        // পেমেন্ট মেথড অনুযায়ী টাইটেল ও গ্রেডিয়েন্ট পরিবর্তন
+        // পেমেন্ট মেথড অনুযায়ী গ্রেডিয়েন্ট পরিবর্তন
         if(method === 'nagad') {
             document.querySelector('.bkash-gradient').style.background = 'linear-gradient(135deg, #F5A623 0%, #d48a1a 100%)';
             document.querySelector('.bkash-gradient span').innerText = 'Nagad Merchant';
@@ -174,8 +184,11 @@
 
         // পেমেন্ট নম্বর লোড (মেথড অনুযায়ী)
         db.collection("settings").doc(method).onSnapshot((doc) => {
-            if(doc.exists) numberSpan.innerText = doc.data().number;
-            else numberSpan.innerText = '01XXXXXXXXX';
+            if(doc.exists && doc.data().number) {
+                numberSpan.innerText = doc.data().number;
+            } else {
+                numberSpan.innerText = '01XXXXXXXXX';
+            }
         });
 
         function showToast(msg, isError = false) {
@@ -196,11 +209,6 @@
             const trx = trxInput.value.trim().toUpperCase();
             if(!trx) return showToast("❌ TrxID লিখুন!", true);
             
-            // যদি orderId না থাকে তাহলে শুধু payments এ সেভ হবে
-            if(!orderId) {
-                showToast("⚠️ অর্ডার আইডি নেই! শুধু পেমেন্ট রেকর্ড করা হবে।", true);
-            }
-
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<span class="loading-spinner"></span> যাচাই হচ্ছে...`;
 
@@ -211,14 +219,15 @@
                     showToast("⚠️ এই TrxID আগেই ব্যবহার হয়েছে!", true);
                 } else {
                     // পেমেন্ট রেকর্ড সেভ
-                    await db.collection("payments").add({
+                    const paymentData = {
                         trxid: trx,
                         amount: amount,
                         method: method,
                         orderId: orderId || null,
                         status: "Pending",
                         time: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    };
+                    await db.collection("payments").add(paymentData);
                     
                     // অর্ডার আইডি থাকলে অর্ডার আপডেট করুন TrxID সহ
                     if(orderId) {
@@ -234,7 +243,7 @@
                     
                     trxInput.value = "";
                     
-                    // 2 সেকেন্ড পর পেজ রিলোড বা ক্লোজ
+                    // 2 সেকেন্ড পর পেজ ক্লোজ
                     setTimeout(() => {
                         window.close();
                     }, 2000);
@@ -250,4 +259,4 @@
         trxInput.addEventListener("input", function() { this.value = this.value.toUpperCase(); });
     </script>
 </body>
-</html>                          
+  </html>  
